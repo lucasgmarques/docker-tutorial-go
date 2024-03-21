@@ -2,7 +2,7 @@
 ## Build
 ##
 
-FROM golang:1.16-buster AS build
+FROM golang:1.16-buster AS build-stage
 
 WORKDIR /app
 
@@ -12,7 +12,11 @@ RUN go mod download
 
 COPY *.go ./
 
-RUN go build -o /docker-gs-ping-roach
+RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping-roach
+
+# Run the tests in the container
+FROM build-stage AS run-test-stage
+RUN go test -v ./...
 
 ##
 ## Deploy
@@ -22,7 +26,7 @@ FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
 
-COPY --from=build /docker-gs-ping-roach /docker-gs-ping-roach
+COPY --from=build-stage /docker-gs-ping-roach /docker-gs-ping-roach
 
 EXPOSE 8080
 
